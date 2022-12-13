@@ -1,0 +1,112 @@
+$prefix: app_message;
+$date-elem: date-elem;
+$note-block: note-block;
+$email-icon: email-icon;
+
+.#{$prefix} {
+  &__container {
+    display: flex;
+    margin: 0.5em 0;
+    padding: 0.5em 0.1em;
+    cursor: pointer;
+    min-height: 3em;
+    border-left-width: 1px;
+    border-left-style: solid;
+    border-left-color: transparent;
+
+    &:hover, &.selected {
+      background-color: #f9f9f9;
+      box-shadow: 0 0 3em #e6e6e6;
+      border-left-color: #546e7a;
+
+      .#{$prefix}__#{$note-block} {
+        display: block;
+      }
+
+      .#{$prefix}__#{$email-icon} {
+        opacity: 1;
+      }
+    }
+
+    &.unread {
+      font-weight: bold;
+
+      .#{$prefix}__#{$date-elem} {
+        display: inline-block;
+        color: darkblue;
+      }
+    }
+  }
+
+  &__#{$date-elem} {
+    border-bottom: 1px dashed #555;
+    display: inline-block;
+  }
+
+  &__date-block {
+    font-size: 0.7em;
+  }
+
+  &__col-1 {
+    width: 2em;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &__col-2 {
+    position: relative;
+    padding-left: 0.3em;
+  }
+
+  &__#{$note-block} {
+    display: none;
+    position: absolute;
+    margin-left: -1.7em;
+    margin-top: -0.5em;
+    color: #888;
+
+    svg {
+      pointer-events: none;
+      width: 1em;
+      display: block;
+    }
+
+    &:hover {
+      color: blue;
+    }
+  }
+
+  &__email-name {
+    margin-right: 0.3em;
+    color: #555;
+  }
+
+  &__email-address {
+    font-style: italic;
+    margin-left: 0.3em;
+  }
+
+  &__#{$email-icon} {
+    opacity: 0.4;
+
+    &.to-trash:hover {
+      color: crimson;
+    }
+
+    &.to-inbox:hover {
+      color: dodgerblue;
+    }
+
+    svg {
+      pointer-events: none;
+      height: 1.3em;
+      display: block;
+    }
+  }
+
+  &__content {
+    padding: 1em;
+  }
+}

@@ -1,0 +1,1 @@
+update emails.notes set idp=0, position=0 where idn=0;

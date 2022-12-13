@@ -1,0 +1,47 @@
+.notes-content {
+  &__header {
+    text-align: center;
+  }
+
+  &__tools {
+    display: flex;
+    justify-content: space-around;
+    margin: 1em;
+    padding: 0.5em;
+    border-top: 1px dashed silver;
+    border-bottom: 1px dashed silver;
+
+    button {
+      padding: 0.3em 0.8em;
+      background-color: #f8f8f8;
+      border: 0 none;
+      cursor: pointer;
+      border-radius: 0.3em;
+
+      &:hover {
+        box-shadow: 0 0 0.3em silver;
+      }
+    }
+  }
+
+  &__content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 1em;
+
+    &[contenteditable="true"] {
+      background-color: #fafafa;
+    }
+  }
+
+  &__event-dlg {
+    input, select {
+      width: 20em;
+    }
+
+    > div {
+      margin: 0.3em;
+      text-align: center;
+    }
+  }
+}

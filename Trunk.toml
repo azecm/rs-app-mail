@@ -1,0 +1,19 @@
+# https://trunkrs.dev/configuration/
+
+[build]
+target = "frontend/index.html"
+release = false
+#dist = "dist"
+#public_url = "/"
+
+[watch]
+frontend = ["frontend/Cargo.toml", "frontend/src"]
+
+[serve]
+address = "127.0.0.1"
+port = 8080
+open = false
+
+[[proxy]]
+backend = "http://localhost:3031/api/"
+

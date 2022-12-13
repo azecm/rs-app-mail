@@ -1,0 +1,1 @@
+select idn, idp, position from emails.notes where idu=$1 and idp=$2 order by position;

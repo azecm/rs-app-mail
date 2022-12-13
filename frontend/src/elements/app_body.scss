@@ -1,0 +1,33 @@
+.app-body {
+  &__container {
+    display: flex;
+    justify-content: center;
+    flex-grow: 1;
+    position: relative;
+  }
+
+  &__column-1 {
+    top: 0;
+    bottom: 0;
+    position: absolute;
+
+    left: 0;
+    right: 50vw;
+    overflow-y: auto;
+    overflow-x: auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: #f7f2ec;
+  }
+
+  &__column-2 {
+    top: 0;
+    bottom: 0;
+    position: absolute;
+    overflow-y: auto;
+
+    left: 50vw;
+    right: 0;
+  }
+}

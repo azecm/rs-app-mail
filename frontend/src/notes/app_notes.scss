@@ -1,0 +1,71 @@
+.app-notes {
+  &__container {
+    user-select: none;
+  }
+
+  &__top {
+    margin: 1em;
+
+    small {
+      color: lightslategray;
+      font-style: italic;
+    }
+  }
+
+  &__button {
+    background-color: transparent;
+    border: 0;
+    margin: 0.4em;
+    padding: 0.5em;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #e2e2e2;
+    }
+  }
+
+  &__list {
+    margin-left: 2em;
+    outline-style: none;
+
+    summary:hover span {
+      background-color: #e1e1e1;
+    }
+  }
+
+  &__item {
+    cursor: pointer;
+    padding: 0 0.1em;
+
+    i {
+      margin-left: 0.4em;
+    }
+
+    &:hover {
+      background-color: #e1e1e1;
+    }
+  }
+
+  &__item-selected {
+    text-decoration: underline;
+    color: mediumblue;
+  }
+
+
+  &__email {
+    display: inline-block;
+    margin-left: 0.5em;
+  }
+
+  &__sub-list {
+    margin: 0.3em 0;
+  }
+
+  &__dlg-body {
+    input,
+    select {
+      width: 20em;
+    }
+  }
+
+}

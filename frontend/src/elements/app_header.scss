@@ -1,0 +1,64 @@
+.app-header {
+
+  &__container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    background-color: #345c80;
+  }
+
+  &__button {
+    display: inline-flex;
+    margin: 0.5em;
+    padding: 0;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 0.2em;
+    border: 0;
+    outline: 0 none;
+    background-color: #d3cbe3b0;
+    color: ghostwhite;
+    transition-duration: 0.5s;
+    transition-property: background-color, color;
+
+    &:hover {
+      background-color: #e2e2e2;
+      color: #333;
+    }
+
+    &.active {
+      color: #5050e0;
+      background-color: #f9f9f9;
+      box-shadow: 0 0 0.3em silver;
+
+      &:hover {
+        background-color: #fdfdfd;
+        text-decoration: underline;
+      }
+    }
+
+    a {
+      display: block;
+      color: inherit;
+      text-decoration: none;
+      outline: 0 none;
+      padding: 0.2em 0.5em;
+
+      &:hover {
+        color: inherit;
+      }
+    }
+  }
+
+  &__text {
+    padding: 0.2em 0.5em;
+  }
+
+  &__icon {
+    width: 1em;
+    margin: 0.32em 0.6em;
+    pointer-events: none;
+  }
+}
+

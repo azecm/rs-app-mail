@@ -1,0 +1,34 @@
+* {
+  scrollbar-width: thin;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #f2f2f2;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-root {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+@import "src/elements/app_login";
+@import "src/elements/app_header";
+@import "src/elements/app_body";
+@import "src/elements/app_message";
+@import "src/elements/attachment";
+@import "src/notes/app_notes";
+@import "src/notes/notes_content";
+@import "src/notes/notes_events";
+@import "src/dialog/dialogs";
+@import "src/editor/app_editor";
+@import "src/editor/editor_tools";
