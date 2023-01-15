@@ -12,6 +12,7 @@ use crate::connect_files::connect_files;
 use crate::constants::{PROP_EDITABLE, PROP_HTML, PROP_NAME, PROP_PLACEHOLDER, PROP_TITLE, TAG_BUTTON, TAG_DIV, TAG_INPUT, TAG_SPAN};
 use crate::dialog::dialogs::Dialog;
 use crate::editor::app_editor::{editor_close, open_email_editor};
+use crate::editor::icons::{icon_attach, icon_close, icon_envelope, icon_eraser, icon_font_bold, icon_font_italic, icon_font_underline, icon_forward, icon_heading, icon_link, icon_list_ol, icon_list_ul, icon_paragraph, icon_reply, icon_save, icon_send, icon_unlink};
 use crate::editor::state::EDITOR;
 use crate::loader::{message_update, notes_update};
 use crate::state::{CURRENT_BOX, NOTES_SELECTED};
@@ -33,23 +34,23 @@ fn css_class(label: &str) -> String {
 
 pub fn editor_tools(is_note: bool) -> Dom {
     let btn_save = match is_note {
-        true => button("сохранить", handle_save, include_str!("../icons/editor/save.svg")),
-        false => button("отправить", handle_send, include_str!("../icons/editor/send.svg"))
+        true => button("сохранить", handle_save, icon_save),
+        false => button("отправить", handle_send, icon_send)
     };
     let mut buttons = vec![
-        button("закрыть", handle_close, include_str!("../icons/editor/close.svg")),
+        button("закрыть", handle_close, icon_close),
         btn_save,
         html!(TAG_SPAN, {.class(css_class("space"))}),
-        button("удалить форматирование", handle_eraser, include_str!("../icons/editor/eraser.svg")),
-        button("заголовок", handle_heading, include_str!("../icons/editor/heading.svg")),
-        button("параграф", handle_paragraph, include_str!("../icons/editor/paragraph.svg")),
-        button("жирный", handle_bold, include_str!("../icons/editor/font-bold.svg")),
-        button("курсив", handle_italic, include_str!("../icons/editor/font-italic.svg")),
-        button("подчеркнутый", handle_underline, include_str!("../icons/editor/font-underline.svg")),
-        button("маркированный список", handle_unordered, include_str!("../icons/editor/list-ul.svg")),
-        button("нумерованный список", handle_ordered, include_str!("../icons/editor/list-ol.svg")),
-        button("ссылка", handle_link, include_str!("../icons/editor/link.svg")),
-        button("удалить ссылку", handle_unlink, include_str!("../icons/editor/link-remove.svg")),
+        button("удалить форматирование", handle_eraser, icon_eraser),
+        button("заголовок", handle_heading, icon_heading),
+        button("параграф", handle_paragraph, icon_paragraph),
+        button("жирный", handle_bold, icon_font_bold),
+        button("курсив", handle_italic, icon_font_italic),
+        button("подчеркнутый", handle_underline, icon_font_underline),
+        button("маркированный список", handle_unordered, icon_list_ul),
+        button("нумерованный список", handle_ordered, icon_list_ol),
+        button("ссылка", handle_link, icon_link),
+        button("удалить ссылку", handle_unlink, icon_unlink),
     ];
 
     if !is_note {
@@ -118,7 +119,7 @@ fn handle_link(_: events::Click) {
             if let Some(node) = selection.anchor_node() {
                 if let Some(element) = get_element_from_node(node_parent(node, "a")) {
                     if let Some(text) = element.get_attribute("href") {
-                        LINK.set_neq(text.clone());
+                        LINK.set_neq(text);
                         LINK_ELEMENT.with(|m| m.set_neq(Some(element)));
                         flag = true;
                     }
@@ -150,9 +151,7 @@ fn dlg_link_result() {
                 Some(element) => {
                     if link.is_empty() {
                         drop_element(element);
-                    } else {
-                        if let Ok(_) = element.set_attribute("href", &link) {}
-                    }
+                    } else if element.set_attribute("href", &link).is_ok() {}
                 }
                 None => {
                     if !link.is_empty() {
@@ -168,24 +167,21 @@ fn dlg_link_result() {
 fn after_link_created() {
     spawn_local(async {
         while let Some(elem) = query_selector("[_moz_dirty]") {
-            if let Ok(_) = elem.remove_attribute("_moz_dirty") {}
+            if elem.remove_attribute("_moz_dirty").is_ok() {}
         }
     });
 }
 
 fn handle_save(_: events::Click) {
     return_focus();
-    match query_selector(&format!("[{PROP_EDITABLE}]")) {
-        Some(elem) => {
-            let content: String = elem.inner_html();
-            let idn = NOTES_SELECTED.get();
-            notes_update(NotesChannel {
-                idn,
-                content: Some(content.clone()),
-                ..NotesChannel::default()
-            });
-        }
-        None => {}
+    if let Some(elem) = query_selector(&format!("[{PROP_EDITABLE}]")) {
+        let content: String = elem.inner_html();
+        let idn = NOTES_SELECTED.get();
+        notes_update(NotesChannel {
+            idn,
+            content: Some(content),
+            ..NotesChannel::default()
+        });
     };
 }
 
@@ -194,7 +190,7 @@ fn handle_close(_: events::Click) {
     if let Some(editor) = EDITOR.get_cloned() {
         if editor.editable {
             if let Some(attachments) = editor.attachments.get_cloned() {
-                if attachments.list.len() > 0 {
+                if !attachments.list.is_empty() {
                     message_update(MessageRequest {
                         idb: 0,
                         attachments: Some(attachments),
@@ -208,17 +204,14 @@ fn handle_close(_: events::Click) {
 }
 
 fn return_focus() {
-    match get_html_element(query_selector(&format!("[{PROP_EDITABLE}]"))) {
-        Some(element) => { if let Ok(_) = element.focus() {} }
-        None => {}
-    };
+    if let Some(element) = get_html_element(query_selector(&format!("[{PROP_EDITABLE}]"))) { if element.focus().is_ok() {} };
 }
 
-fn button(title: &str, click: fn(events::Click), icon_text: &str) -> Dom {
+fn button(title: &str, click: fn(events::Click), icon: fn()->Dom) -> Dom {
     html!(TAG_BUTTON, {
         .attr(PROP_TITLE, title)
         .event(click)
-        .prop(PROP_HTML, icon_text)
+        .child(icon())
     })
 }
 
@@ -252,10 +245,10 @@ fn handle_change(e: events::Change) {
                     if let Some(attachments) = editor.attachments.get_cloned() {
                         let current = obj_to_string(&attachments);
                         if let Ok(form) = FormData::new() {
-                            if let Err(_) = form.append_with_str("current", &current) {}
+                            form.append_with_str("current", &current).ok();
                             for ind in 0..files.length() {
                                 if let Some(file) = files.item(ind) {
-                                    if let Err(_) = form.append_with_blob("files", &file) {}
+                                    form.append_with_blob("files", &file).ok();
                                 }
                             }
                             connect_files(&form, handle_progress, handle_progress_final);
@@ -269,7 +262,6 @@ fn handle_change(e: events::Change) {
 }
 
 fn button_attach() -> Dom {
-    let icon = include_str!("../icons/editor/attach.svg");
     html!(TAG_BUTTON, {
         .attr(PROP_TITLE, "прикрепить файлы")
         .child_signal(UPLOAD_STARTED.signal().map(|flag|
@@ -284,7 +276,7 @@ fn button_attach() -> Dom {
         ))
         .child(html!(TAG_DIV, {
             .class(css_class("icon-block"))
-            .prop_signal(PROP_HTML, UPLOAD_STARTED.signal().map(move|flag|if flag {""} else {icon}))
+            .child_signal(UPLOAD_STARTED.signal().map(move|flag|if flag {None} else {Some(icon_attach())}))
         }))
         .child(html!(TAG_INPUT, {
             .class(css_class("input-file"))
@@ -301,13 +293,13 @@ fn button_attach() -> Dom {
 pub fn editor_preview_tools() -> Dom {
     let with_unread = EDITOR.get_cloned().unwrap_or_default().with_unread;
     let mut buttons = vec![
-        button("закрыть", handle_close, include_str!("../icons/editor/close.svg")),
-        button("ответить", handle_reply, include_str!("../icons/editor/reply.svg")),
-        button("переслать", handle_forward, include_str!("../icons/editor/forward.svg")),
+        button("закрыть", handle_close, icon_close),
+        button("ответить", handle_reply, icon_reply),
+        button("переслать", handle_forward, icon_forward),
         html!(TAG_SPAN, {.class(css_class("space"))}),
     ];
     if with_unread {
-        buttons.push(button("отменить прочтение", handle_unread, include_str!("../icons/envelope.svg")));
+        buttons.push(button("отменить прочтение", handle_unread, icon_envelope));
     }
 
     html!(TAG_DIV, {
@@ -336,14 +328,14 @@ fn handle_forward(_: events::Click) {
 }
 
 fn to_html(text: String) -> String {
-    text.replace("<", "&lt;").replace(">", "&gt;")
+    text.replace('<', "&lt;").replace('>', "&gt;")
 }
 
 fn handle_unread(_: events::Click) {
     if let Some(editor) = EDITOR.get_cloned() {
         if editor.idb > 0 {
             message_update(MessageRequest {
-                idb: editor.idb.clone(),
+                idb: editor.idb,
                 unread: Some(true),
                 box_current: Some(box_type_index(&CURRENT_BOX.get()) as i32),
                 ..MessageRequest::default()

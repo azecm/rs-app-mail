@@ -62,7 +62,7 @@ pub fn user_sse_connected(idu: i32) -> impl Stream<Item=Result<Event, warp::Erro
     let rx = UnboundedReceiverStream::new(rx);
 
     tx.send(Message::Reply("".to_string())).unwrap();
-    USERS_SSE.lock().unwrap().insert(channel_id, Client::new(idu.clone(), tx));
+    USERS_SSE.lock().unwrap().insert(channel_id, Client::new(idu, tx));
 
     init_data(SessionStruct::with_key(&idu, &channel_id, ""));
 
@@ -106,7 +106,7 @@ pub fn sse_cleaner() {
 }
 
 pub fn sse_channel(session: &SessionStruct, msg: Message) {
-    let send_to = session.idu.clone();
+    let send_to = session.idu;
     match USERS_SSE.lock() {
         Ok(mut sse) => {
             sse.retain(|_uid, client| {
@@ -126,9 +126,9 @@ pub fn sse_channel(session: &SessionStruct, msg: Message) {
 }
 
 pub fn sse_next_key(session: &SessionStruct) {
-    let key = get_hash(format!("{}-{}", session.idu, Uuid::new_v4().to_string()));
+    let key = get_hash(format!("{}-{}", session.idu, Uuid::new_v4()));
     if let Ok(mut user_auth) = USER_AUTH.lock() {
-        if sse_personal(&session, Message::User(key.clone())) {
+        if sse_personal(session, Message::User(key.clone())) {
             user_auth.insert(key.clone(), SessionStruct::with_key(&session.idu, &session.channel_id, &key));
             user_auth.remove(&session.current);
         } else {
@@ -138,8 +138,8 @@ pub fn sse_next_key(session: &SessionStruct) {
 }
 
 pub fn sse_personal_channel(session: &SessionStruct, msg: Message) {
-    sse_personal(&session, msg);
-    sse_next_key(&session);
+    sse_personal(session, msg);
+    sse_next_key(session);
 }
 
 fn sse_personal(session: &SessionStruct, msg: Message) -> bool {

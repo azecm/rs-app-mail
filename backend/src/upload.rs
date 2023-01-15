@@ -24,7 +24,7 @@ pub async fn upload(session: &SessionStruct, form: FormData) {
                 }
                 "files" => {
                     let file_name_temp = part_as_file(&mut p).await;
-                    let file_name = p.filename().clone().unwrap_or_default();
+                    let file_name = p.filename().unwrap_or_default();
                     if !file_name_temp.is_empty() && !file_name.is_empty() {
                         files.push((file_name_temp, file_name.to_string()));
                     }
@@ -32,19 +32,19 @@ pub async fn upload(session: &SessionStruct, form: FormData) {
                 _ => {}
             }
         }
-        if files.len() > 0 {
+        if !files.is_empty() {
             if let Ok(attachments) = serde_json::from_str::<BoxMailAttachments>(&current) {
                 let key = attachments.key.clone();
                 let mut list = attachments.list.clone();
                 let mut ind = if let Some(v) = list.iter().map(|r| r.id).max() {
                     v
                 } else { 0 };
-                ind = ind + 1;
+                ind += 1;
                 for (file_name_temp, file_name) in files.iter() {
-                    if let Ok(metadata) = fs::metadata(&path_to_temp_upload(&file_name_temp)).await {
-                        if let Ok(_) = fs::rename(&path_to_temp_upload(&file_name_temp), &path_to_temp_with_ind(&key, &ind)).await {
+                    if let Ok(metadata) = fs::metadata(&path_to_temp_upload(file_name_temp)).await {
+                        if (fs::rename(&path_to_temp_upload(file_name_temp), &path_to_temp_with_ind(&key, &ind)).await).is_ok() {
                             list.push(BoxMailAttachmentItem { file_name: file_name.to_string(), id: ind, size: metadata.len() });
-                            ind = ind + 1;
+                            ind += 1;
                         }
                     }
                 }
@@ -59,20 +59,18 @@ pub async fn upload(session: &SessionStruct, form: FormData) {
 }
 
 async fn part_as_string(p: &mut Part) -> String {
-    if let Some(v1) = p.data().await {
-        if let Ok(v2) = v1 {
-            let v3 = v2.chunk();
-            return String::from_utf8_lossy(v3).to_string();
-        }
+    if let Some(Ok(v1)) = p.data().await {
+        let v2 = v1.chunk();
+        return String::from_utf8_lossy(v2).to_string();
     }
     "".to_string()
 }
 
 async fn part_as_file(p: &mut Part) -> String {
     let fine_name = Uuid::new_v4().to_string();
-    if let Ok(_) = fs::create_dir_all(&path_to_temp_upload("")).await {
+    if (fs::create_dir_all(&path_to_temp_upload("")).await).is_ok() {
         if let Some(Ok(e)) = p.data().await {
-            if let Ok(_) = fs::write(&path_to_temp_upload(&fine_name), &e.chunk()).await {
+            if (fs::write(&path_to_temp_upload(&fine_name), &e.chunk()).await).is_ok() {
                 return fine_name;
             }
         }

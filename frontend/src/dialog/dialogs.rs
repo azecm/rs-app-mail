@@ -184,12 +184,12 @@ fn dialog_form(data: &Dialog) -> Dom {
 }
 
 fn dialog_footer(data: &Dialog) -> Dom {
-    let confirm = data.confirm.clone();
-    let cancel = data.cancel.clone();
+    let confirm = data.confirm;
+    let cancel = data.cancel;
 
     let mut buttons: Vec<Dom> = data.before.iter()
         .map(|row| {
-            let click = row.click.clone();
+            let click = row.click;
             html!(TAG_BUTTON, {
             .text(&row.label)
             .event(move|_: events::Click|{
@@ -235,18 +235,12 @@ fn common_open() {
     let count = DIALOGS.lock_mut().len();
 
     if count == 0 {
-        match get_selection() {
-            Some(selection) => {
-                if selection.range_count() > 0 {
-                    match selection.get_range_at(0) {
-                        Ok(current) => {
-                            RANGE_SAVED.with(|range| range.set(Some(current)));
-                        }
-                        Err(_) => {}
-                    }
+        if let Some(selection) = get_selection() {
+            if selection.range_count() > 0 {
+                if let Ok(current) = selection.get_range_at(0) {
+                    RANGE_SAVED.with(|range| range.set(Some(current)));
                 }
             }
-            None => {}
         }
     }
 }
@@ -254,26 +248,17 @@ fn common_open() {
 fn common_close() {
     let count = DIALOGS.lock_mut().len();
     if count == 0 {
-        match get_selection() {
-            Some(selection) => {
-                match selection.remove_all_ranges() {
-                    Ok(_) => {
-                        RANGE_SAVED.with(|saved| {
-                            match saved.lock_ref().deref() {
-                                Some(saved) => {
-                                    match selection.add_range(saved) {
-                                        Ok(_) => {}
-                                        Err(_) => {}
-                                    }
-                                }
-                                None => {}
-                            }
-                        });
+        if let Some(selection) = get_selection() {
+            if selection.remove_all_ranges().is_ok() {
+                RANGE_SAVED.with(|saved| {
+                    match saved.lock_ref().deref() {
+                        Some(saved) => {
+                            if selection.add_range(saved).is_ok() {}
+                        }
+                        None => {}
                     }
-                    Err(_) => {}
-                }
+                });
             }
-            None => {}
         }
     }
 }

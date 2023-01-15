@@ -34,7 +34,7 @@ pub fn app_header() -> Dom {
 }
 
 fn events() -> impl Signal<Item=Option<Dom>> {
-    EVENTS.signal_cloned().map(|items| if items.len() > 0 { Some(button(&format!("[{}]", items.len()), handle_events)) } else { None })
+    EVENTS.signal_cloned().map(|items| if !items.is_empty() { Some(button(&format!("[{}]", items.len()), handle_events)) } else { None })
 }
 
 fn new_mail() {
@@ -61,7 +61,7 @@ fn button_typed(label: &str, mb: MailBoxes) -> Dom {
             if let Some(elem) = query_selector("#col-2") {
                 BOX_STATE[ind_prev].scroll_list.set(elem.scroll_top());
             }
-            CURRENT_BOX.set(mb.clone());
+            CURRENT_BOX.set(mb);
 
             spawn_local(async move {
                 if let Some(elem) = query_selector("#col-1") {

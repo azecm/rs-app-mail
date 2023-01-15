@@ -18,15 +18,15 @@ pub struct SessionStruct {
 impl SessionStruct {
     pub fn new(idu: &i32) -> Self {
         Self {
-            idu: idu.clone(),
+            idu: *idu,
             channel_id: 0,
             current: "".to_string(),
         }
     }
     pub fn with_key(idu: &i32, channel_id: &usize, current: &str) -> Self {
         Self {
-            idu: idu.clone(),
-            channel_id: channel_id.clone(),
+            idu: *idu,
+            channel_id: *channel_id,
             current: current.to_string(),
         }
     }

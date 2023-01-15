@@ -5,14 +5,15 @@ use web_sys::UrlSearchParams;
 use shared::constants::{API_FILE, ROOT_API};
 use shared::types::{BoxMailAttachmentItem, BoxMailAttachments, MessageRequest};
 
-use crate::constants::{PROP_HTML, PROP_TITLE, TAG_DIV, TAG_SPAN};
+use crate::constants::{PROP_TITLE, TAG_DIV, TAG_SPAN};
 use crate::editor::app_editor::get_editor;
 use crate::elements::app_login::get_user_box;
+use crate::elements::icons::icon_remove;
 use crate::loader::message_update;
 use crate::state::USER_KEY;
 use crate::utils::{attr_data, from_dataset};
 
-const ATTR_ID: &'static str = "id";
+const ATTR_ID: &str = "id";
 
 fn css_class(label: &str) -> String {
     format!("attachments__{label}")
@@ -81,7 +82,6 @@ pub fn attachments_active(attachments_signal: MutableSignalCloned<Option<BoxMail
 }
 
 fn item_active(row: &BoxMailAttachmentItem, key: &str) -> Dom {
-    let icon_remove = include_str!("../icons/editor/remove.svg");
     html!(TAG_DIV, {
         .class(css_class("item"))
         .children([
@@ -89,7 +89,7 @@ fn item_active(row: &BoxMailAttachmentItem, key: &str) -> Dom {
             html!(TAG_SPAN, {
                 .class(css_class("item-icon"))
                 .attr(attr_data(ATTR_ID), &row.id.to_string())
-                .prop(PROP_HTML, icon_remove)
+                .child(icon_remove())
                 .event(handle_remove)
             })
         ])
@@ -112,7 +112,7 @@ fn handle_remove(e: events::Click) {
 
 fn get_size(size: &u64) -> String {
     let mut ext = "б";
-    let mut size = size.clone() as f32;
+    let mut size = *size as f32;
     if size > 1024.0 {
         size = (size / 1024.0 * 10.0).round() / 10.0;
         ext = "кб";

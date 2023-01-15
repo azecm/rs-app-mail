@@ -14,7 +14,7 @@ pub fn connect_json_send<T: serde::Serialize>(url: &str, data: T) {
         Ok(data) => {
             let url = url.to_string();
             spawn_local(async move {
-                if let Err(_) = send(&url, Some(data)).await {};
+                (send(&url, Some(data)).await).ok();
             });
         }
         Err(err) => {
@@ -44,15 +44,12 @@ fn connect_post_json<R>(url: &str, data: Option<JsValue>, result: Option<fn(R)>)
 {
     let url = url.to_string();
     spawn_local(async move {
-        match send(&url, data).await {
-            Ok(data) => {
-                if let Ok(data) = serde_wasm_bindgen::from_value::<R>(data) {
-                    if let Some(result) = result {
-                        result(data);
-                    }
+        if let Ok(data) = send(&url, data).await {
+            if let Ok(data) = serde_wasm_bindgen::from_value::<R>(data) {
+                if let Some(result) = result {
+                    result(data);
                 }
             }
-            Err(_) => {}
         };
     });
 }
@@ -72,7 +69,7 @@ async fn send(url: &str, data: Option<JsValue>) -> Result<JsValue, JsValue> {
     request.headers().set("Content-Type", "application/json")?;
     let user_key = USER_KEY.get_cloned();
     if !user_key.is_empty() {
-        request.headers().set(&HEADER_USER_KEY, &user_key)?;
+        request.headers().set(HEADER_USER_KEY, &user_key)?;
     }
 
     let window = web_sys::window().unwrap();

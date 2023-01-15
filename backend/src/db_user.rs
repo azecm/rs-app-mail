@@ -60,11 +60,11 @@ pub async fn db_user_init() {
     let rows = db_query(DBUserInit::from, "select idu, email, name from emails.users;", &[]).await;
     for row in rows.iter() {
         if let Ok(mut users) = USER_BY_EMAIL.lock() {
-            users.insert(row.email.clone(), row.idu.clone());
+            users.insert(row.email.clone(), row.idu);
         }
         if let Ok(mut users) = USER_BY_ID.lock() {
-            users.insert(row.idu.clone(), DBUserInit {
-                idu: row.idu.clone(),
+            users.insert(row.idu, DBUserInit {
+                idu: row.idu,
                 email: row.email.clone(),
                 name: row.name.clone(),
             });

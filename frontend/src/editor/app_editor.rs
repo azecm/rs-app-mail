@@ -20,10 +20,7 @@ pub fn editor_close() {
 }
 
 pub fn app_editor() -> impl Signal<Item=Option<Dom>> {
-    EDITOR.signal_cloned().map(|state| match state {
-        Some(state) => Some(editor(state)),
-        None => None
-    })
+    EDITOR.signal_cloned().map(|state| state.map(editor))
 }
 
 pub fn get_editor() -> Option<EditorState> {
@@ -34,7 +31,7 @@ pub fn open_note_editor(is_note: bool, content: String) {
     let content = if content.trim().is_empty() {
         "<p><br></p>".to_string()
     } else {
-        content.clone()
+        content
     };
     EDITOR.set(Some(EditorState {
         is_note,
@@ -46,7 +43,7 @@ pub fn open_note_editor(is_note: bool, content: String) {
 
 pub fn set_editor_attachments(attachments: BoxMailAttachments) {
     if let Some(editor) = EDITOR.get_cloned() {
-        editor.attachments.set(Some(attachments.clone()));
+        editor.attachments.set(Some(attachments));
     }
 }
 
@@ -56,7 +53,7 @@ pub fn open_email_editor(idb: u64, mail_to: String, subject: String, content: St
         Err(_) => "".to_string()
     };
     message_update(MessageRequest {
-        idb: idb.clone(),
+        idb,
         attachments: Some(BoxMailAttachments { key: "".to_string(), list: vec![] }),
         ..MessageRequest::default()
     });
@@ -72,7 +69,7 @@ pub fn open_email_editor(idb: u64, mail_to: String, subject: String, content: St
 pub fn open_message_preview(idb: &u64, attachments: &Option<BoxMailAttachments>, mail_from: String, mail_to: String, subject: String, content: String) {
     let with_unread = CURRENT_BOX.get() == MailBoxes::Inbox;
     EDITOR.set(Some(EditorState {
-        idb: idb.clone(),
+        idb: *idb,
         with_unread,
         sender: Some(mail_from),
         recipient: Some(mail_to),
@@ -82,7 +79,7 @@ pub fn open_message_preview(idb: &u64, attachments: &Option<BoxMailAttachments>,
         ..EditorState::default()
     }));
     message_update(MessageRequest {
-        idb: idb.clone(),
+        idb: *idb,
         unread: Some(false),
         box_current: Some(box_type_index(&CURRENT_BOX.get()) as i32),
         ..MessageRequest::default()
@@ -99,7 +96,7 @@ fn editor(state: EditorState) -> Dom {
     let mut top: Vec<Dom> = vec![];
 
     if state.editable {
-        let is_note = state.is_note.clone();
+        let is_note = state.is_note;
         if !is_note {
             top.push(header_active(&state));
         }

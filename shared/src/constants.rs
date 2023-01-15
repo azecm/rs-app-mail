@@ -2,21 +2,21 @@
 pub const MAIL_ATTACH_EXT: &str = ".tmp";
 pub const BY_PAGE: i64 = 30;
 
-pub static ROOT_API: &'static str = "api";
-pub static API_NOTES: &'static str = "notes";
-pub static API_FILE: &'static str = "file";
-pub static API_FILES: &'static str = "files";
-pub static API_LOGIN: &'static str = "login";
-pub static API_EVENT: &'static str = "event";
+pub const ROOT_API: &str = "api";
+pub const API_NOTES: &str = "notes";
+pub const API_FILE: &str = "file";
+pub const API_FILES: &str = "files";
+pub const API_LOGIN: &str = "login";
+pub const API_EVENT: &str = "event";
 
-pub static CHANNEL_NOTES: &'static str = "notes";
-pub static CHANNEL_BOXES: &'static str = "boxes";
-pub static CHANNEL_MESSAGES: &'static str = "msg-list";
-pub static CHANNEL_MESSAGE: &'static str = "msg-update";
-pub static CHANNEL_INIT: &'static str = "init";
-pub static CHANNEL_USER_KEY: &'static str = "user";
+pub const CHANNEL_NOTES: &str = "notes";
+pub const CHANNEL_BOXES: &str = "boxes";
+pub const CHANNEL_MESSAGES: &str = "msg-list";
+pub const CHANNEL_MESSAGE: &str = "msg-update";
+pub const CHANNEL_INIT: &str = "init";
+pub const CHANNEL_USER_KEY: &str = "user";
 
-pub static HEADER_USER_KEY: &'static str = "User-Key";
+pub const HEADER_USER_KEY: &str = "User-Key";
 
 #[cfg(target_os = "macos")]
 pub const TEST_USER_ID: i32 = 1;

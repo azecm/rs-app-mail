@@ -13,16 +13,16 @@ fn hash_prepare(text: String) -> impl LowerHex {
 }
 
 pub fn get_dir_path(file_path: &str) -> String {
-    if let Some(pos) = file_path.rfind("/") {
-        format!("{}", &file_path[..pos])
+    if let Some(pos) = file_path.rfind('/') {
+        file_path[..pos].to_string()
     } else {
         "".to_string()
     }
 }
 
 pub fn get_file_name(file_path: &str) -> String {
-    if let Some(pos) = file_path.rfind("/") {
-        format!("{}", &file_path[pos + 1..])
+    if let Some(pos) = file_path.rfind('/') {
+        file_path[pos + 1..].to_string()
     } else {
         "".to_string()
     }

@@ -12,10 +12,10 @@ pub fn connect_files(form: &FormData, progress: fn(u32), full: fn(bool)) {
         return;
     }
     if let Ok(xhr) = XmlHttpRequest::new() {
-        if let Err(_) = xhr.open_with_async("POST", &format!("/{ROOT_API}/{API_FILES}/"), true) {
+        if xhr.open_with_async("POST", &format!("/{ROOT_API}/{API_FILES}/"), true).is_err() {
             return;
         }
-        if let Err(_) = xhr.set_request_header(&HEADER_USER_KEY, &user_key) {}
+        xhr.set_request_header(HEADER_USER_KEY, &user_key).ok();
 
         if let Ok(upload) = xhr.upload() {
             let onprogress_callback = Closure::<dyn FnMut(_)>::new(move |e: ProgressEvent| {
@@ -26,7 +26,7 @@ pub fn connect_files(form: &FormData, progress: fn(u32), full: fn(bool)) {
             onprogress_callback.forget();
         }
 
-        if let Err(_) = xhr.send_with_opt_form_data(Some(&form)) {}
+        xhr.send_with_opt_form_data(Some(form)).ok();
 
         let onerror_callback = Closure::<dyn FnMut(_)>::new(move |_e: ErrorEvent| {
             log::error!("[connect_files]");

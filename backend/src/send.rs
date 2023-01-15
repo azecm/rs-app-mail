@@ -27,13 +27,13 @@ pub async fn send_message(sender: &str, recipient: &str, subject: &str, message:
         );
 
     if let Some(attachments) = attachments {
-        if attachments.list.len() > 0 {
+        if !attachments.list.is_empty() {
             let key = attachments.key.clone();
             multipart = MultiPart::mixed().multipart(multipart);
             for item in attachments.list.iter() {
                 let path_to_file = path_to_temp_with_ind(&key, &item.id);
                 let mime = mime_guess::from_path(&item.file_name).first_or_octet_stream();
-                if let Ok(content_type) = header::ContentType::parse(&mime.to_string()) {
+                if let Ok(content_type) = header::ContentType::parse(mime.as_ref()) {
                     if let Ok(f) = fs::read(path_to_file) {
                         multipart = multipart.singlepart(
                             SinglePart::builder()
@@ -130,9 +130,9 @@ fn to_text(html: &str) -> String {
     let text = String::from_utf8(output).unwrap_or_default();
 
     text.replace("&gt;", ">")
-        .split("\n")
+        .split('\n')
         .into_iter()
-        .filter_map(|t| if t.trim().is_empty() { None } else { Some(t) })
+        .filter(|t| !t.trim().is_empty())
         .collect::<Vec<_>>()
         .join("\n")
 }

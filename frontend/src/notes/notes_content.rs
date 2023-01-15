@@ -1,7 +1,6 @@
 use dominator::{Dom, events, html};
 use futures_signals::map_ref;
 use futures_signals::signal::{Mutable, Signal, SignalExt};
-use js_sys::JsString;
 
 use shared::types::{MailBoxes, NotesChannel, NotesEvent};
 
@@ -49,7 +48,7 @@ pub fn notes_content() -> Dom {
 // ===
 
 fn view_event(d: &str) -> String {
-    let l: Vec<&str> = d.split("-").collect();
+    let l: Vec<&str> = d.split('-').collect();
     format!("{}.{}.{}", l[2], l[1], l[0])
 }
 
@@ -84,10 +83,10 @@ fn button_event_sub_signal(idn: i32) -> impl Signal<Item=Option<Dom>> {
 }
 
 fn period_to_text(ind: &i32) -> String {
-    match ind {
-        &PERIOD_DAY => "день".to_string(),
-        &PERIOD_MONTH => "месяц".to_string(),
-        &PERIOD_YEAR => "год".to_string(),
+    match *ind {
+        PERIOD_DAY => "день".to_string(),
+        PERIOD_MONTH => "месяц".to_string(),
+        PERIOD_YEAR => "год".to_string(),
         _ => "".to_string()
     }
 }
@@ -110,8 +109,8 @@ fn handle_next(_: events::Click) {
     if let Some(item) = NOTES.lock_ref().iter().find(|row| row.idn == idn) {
         if let Some(event) = item.event.get_cloned() {
             let js_date: js_sys::Date = js_sys::Date::new(&event.date.clone().into());
-            let period = event.period.clone();
-            let delta = event.delta.clone() as u32;
+            let period = event.period;
+            let delta = event.delta as u32;
             match period {
                 PERIOD_DAY => {
                     js_date.set_date(js_date.get_date() + delta);
@@ -158,9 +157,9 @@ fn remove_event() -> bool {
     true
 }
 
-const INPUT_NAME_DATE: &'static str = "date";
-const INPUT_NAME_DELTA: &'static str = "delta";
-const INPUT_NAME_PERIOD: &'static str = "period";
+const INPUT_NAME_DATE: &str = "date";
+const INPUT_NAME_DELTA: &str = "delta";
+const INPUT_NAME_PERIOD: &str = "period";
 
 fn dlg_event_init() -> Dom {
     let current_date: String = String::from(js_sys::Date::new_0().to_json().substring(0, 10));
@@ -232,7 +231,7 @@ fn dlg_event_result() {
     let js_date: js_sys::Date = js_sys::Date::new(&date.clone().into());
 
     // js_sys::Date::new(&date.clone().into()).to_json().substring(0, 10)==date
-    if js_date.to_string() != JsString::from("Invalid Date") && delta > 0 {
+    if js_date.to_string() != *"Invalid Date" && delta > 0 {
         notes_update(NotesChannel {
             idn: NOTES_SELECTED.get(),
             event: Some(NotesEvent { date, delta, period }),
@@ -274,14 +273,18 @@ fn handle_create_email(_: events::Click) {
 
     if !source.is_empty() {
         let mut flag_content = false;
-        let div = create_element("div");
+
+        let div = match create_element("div") {
+            Some(el)=>el,
+            None=>return
+        };
         div.set_inner_html(&source);
         let list = div.child_nodes();
         for ind in 0..list.length() {
             if let Some(node) = list.item(ind) {
                 let text: String = node.text_content().unwrap_or_default().trim().to_string();
-                if text.starts_with(marker_subject) {
-                    subject = text[marker_subject.len()..].trim().to_string();
+                if let Some(text) = text.strip_prefix(marker_subject) {
+                    subject = text.trim().to_string();
                 }
                 if text.contains(marker_content_end) {
                     flag_content = false;

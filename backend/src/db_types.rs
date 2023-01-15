@@ -165,8 +165,8 @@ pub struct DBMailAttachmentItem {
 impl From<&BoxMailAttachmentItem> for DBMailAttachmentItem {
     fn from(row: &BoxMailAttachmentItem) -> Self {
         Self {
-            id: row.id.clone(),
-            size: row.size.clone(),
+            id: row.id,
+            size: row.size,
             file_name: row.file_name.clone(),
         }
     }

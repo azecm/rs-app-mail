@@ -113,12 +113,12 @@ async fn main() {
                         Ok(session.idu)
                     } else { Err(()) }
                 } else { Err(()) };
-                res.map(|val| val).map_err(|_| warp::reject::custom(NotUtf8))
+                res.map_err(|_| warp::reject::custom(NotUtf8))
             })
         )
         .map(|idu: i32| {
             let stream = user_sse_connected(idu);
-            return warp::sse::reply(warp::sse::keep_alive().stream(stream));
+            warp::sse::reply(warp::sse::keep_alive().stream(stream))
         });
 
     let routes_dir = warp::fs::dir("/Users/mac-user/Documents/development/rs-app-mail/frontend/dist");

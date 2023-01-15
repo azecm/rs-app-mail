@@ -1,3 +1,5 @@
+//extern crate mailparse;
+
 use std::fs;
 use std::fs::File;
 use std::io::Read;
@@ -6,9 +8,13 @@ use std::string::ToString;
 
 use lol_html::{comments, element, HtmlRewriter, Settings};
 use lol_html::html_content::ContentType;
+//use mailparse::*;
 use mail_parser::{Addr, HeaderValue, Message, MimeHeaders};
 use mail_parser::PartType::Binary;
 use once_cell::sync::Lazy;
+//use mailparse::MailAddr::{Group, Single};
+//use mailparse::{MailHeaderMap, ParsedMail};
+//use mailparse::MailAddr::{Group, Single};
 use uuid::Uuid;
 
 use crate::constants::{MAIL_SOURCE_PATH, path_to_attachment, path_to_saved};
@@ -16,6 +22,8 @@ use crate::db_boxes::db_box_add_received;
 use crate::db_types::{DBMailAddress, DBMailAttachmentItem, DBMailAttachments};
 use crate::state::USER_BY_EMAIL;
 use crate::utils::{get_dir_path, get_file_name};
+
+// pub static USER_BY_ID: Lazy<Arc<Mutex<HashMap<i32, DBUserInit>>>> = Lazy::new(|| Arc::new(Mutex::new(HashMap::new())));
 
 static TRUSTED: Lazy<Vec<String>> = Lazy::new(|| [
     ".ru", ".dev", ".org", ".net", "gmail.com", "hotmail.com", "zoom.us"
@@ -32,11 +40,9 @@ pub async fn mail_watcher() {
                 Ok(_) => {
                     match fs::read_dir(&path_dir) {
                         Ok(read_dir) => {
-                            for entries in read_dir.into_iter() {
-                                if let Ok(entries) = entries {
-                                    if let Some(path_to_file) = entries.path().to_str() {
-                                        read_email(path_to_file);
-                                    }
+                            for entries in read_dir.into_iter().flatten() {
+                                if let Some(path_to_file) = entries.path().to_str() {
+                                    read_email(path_to_file);
                                 }
                             }
                         }
@@ -83,11 +89,11 @@ pub fn mail_watcher_() -> notify::Result<()> {
 
 fn watch_dirs() -> Vec<String> {
     let emails = if let Ok(users) = USER_BY_EMAIL.lock() {
-        users.keys().map(|k| k.clone()).collect::<Vec<String>>()
+        users.keys().cloned().collect::<Vec<String>>()
     } else { vec![] };
 
     emails.iter().map(|email| {
-        let list = email.split("@").collect::<Vec<_>>();
+        let list = email.split('@').collect::<Vec<_>>();
         let domain = list[1];
         let user = list[0];
         format!("{MAIL_SOURCE_PATH}/{domain}/{user}/new")
@@ -95,12 +101,12 @@ fn watch_dirs() -> Vec<String> {
 }
 
 fn get_email_from_path(path: &str) -> String {
-    let list = path.split("/").collect::<Vec<_>>();
+    let list = path.split('/').collect::<Vec<_>>();
     format!("{}@{}", list[list.len() - 3], list[list.len() - 4])
 }
 
 fn read_email(path_to_file: &str) {
-    if get_file_name(path_to_file).starts_with(".") {
+    if get_file_name(path_to_file).starts_with('.') {
         return;
     }
     match fs::metadata(path_to_file) {
@@ -112,7 +118,7 @@ fn read_email(path_to_file: &str) {
     let current_email = get_email_from_path(path_to_file);
     let mail_source: Vec<u8> = if let Ok(mut f) = File::open(path_to_file) {
         let mut d: Vec<u8> = Vec::<u8>::new();
-        if let Err(_) = f.read_to_end(&mut d) {}
+        f.read_to_end(&mut d).ok();
         d
     } else { vec![] };
 
@@ -195,8 +201,8 @@ fn prepare(message: Message, current_email: &str) {
         }
     }
 
-    let attachments: Option<DBMailAttachments> = if list.len() == 0 { None } else {
-        Some(DBMailAttachments { key: key.clone(), list })
+    let attachments: Option<DBMailAttachments> = if list.is_empty() { None } else {
+        Some(DBMailAttachments { key, list })
     };
 
     let sender = mail_address_from_header(from);
@@ -231,7 +237,7 @@ fn mail_address_from_header(header: &HeaderValue) -> DBMailAddress {
             get_first(addr)
         }
         HeaderValue::AddressList(addr_list) => {
-            if addr_list.len() > 0 {
+            if !addr_list.is_empty() {
                 get_first(&addr_list[0])
             } else {
                 DBMailAddress::default()

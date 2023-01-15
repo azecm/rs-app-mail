@@ -14,11 +14,11 @@ use crate::state::{CURRENT_BOX, NOTES, NOTES_SELECTED};
 use crate::types::NoteStruct;
 use crate::utils::{attr_data, from_dataset, get_input_value};
 
-const INPUT_NAME_LABEL: &'static str = "label";
-const INPUT_NAME_EMAIL: &'static str = "email";
-const INPUT_NAME_POSITION: &'static str = "position";
-const INPUT_NAME_IDP: &'static str = "idp";
-const ATTR_ID: &'static str = "id";
+const INPUT_NAME_LABEL: &str = "label";
+const INPUT_NAME_EMAIL: &str = "email";
+const INPUT_NAME_POSITION: &str = "position";
+const INPUT_NAME_IDP: &str = "idp";
+const ATTR_ID: &str = "id";
 
 static CURRENT_ID: Lazy<Mutable<i32>> = Lazy::new(|| Mutable::new(0));
 thread_local! {
@@ -30,7 +30,7 @@ fn css_class(label: &str) -> String {
 }
 
 fn get_group_len(idp: i32) -> usize {
-    NOTES.lock_ref().iter().filter(|row| row.idp.get() == idp).collect::<Vec<_>>().len()
+    NOTES.lock_ref().iter().filter(|row| row.idp.get() == idp).count()
 }
 
 pub fn app_notes() -> Dom {
@@ -141,12 +141,9 @@ fn edit_group_result() {
 
     if label.is_empty() {
         let mut flag_alert = false;
-        match NOTES.lock_ref().iter().find(|row| row.idp.get() == idn) {
-            Some(item) => {
-                let idp = item.idp.get();
-                flag_alert = get_group_len(idp) > 0;
-            }
-            None => {}
+        if let Some(item) = NOTES.lock_ref().iter().find(|row| row.idp.get() == idn) {
+            let idp = item.idp.get();
+            flag_alert = get_group_len(idp) > 0;
         };
         if flag_alert {
             spawn_local(async {
@@ -155,26 +152,24 @@ fn edit_group_result() {
         } else {
             before_delete("Удалить группу?");
         }
-    } else {
-        if let Some(item) = NOTES.lock_ref().iter().find(|row| row.idn == idn) {
-            let item = item.clone();
-            let label = match item.label.get_cloned() == label {
-                false => Some(label),
-                true => None
-            };
-            let position = match item.position.get() == position {
-                false => Some(position),
-                true => None
-            };
+    } else if let Some(item) = NOTES.lock_ref().iter().find(|row| row.idn == idn) {
+        let item = item.clone();
+        let label = match item.label.get_cloned() == label {
+            false => Some(label),
+            true => None
+        };
+        let position = match item.position.get() == position {
+            false => Some(position),
+            true => None
+        };
 
-            if label.is_some() || position.is_some() {
-                notes_update(NotesChannel {
-                    idn,
-                    label,
-                    position,
-                    ..NotesChannel::default()
-                });
-            }
+        if label.is_some() || position.is_some() {
+            notes_update(NotesChannel {
+                idn,
+                label,
+                position,
+                ..NotesChannel::default()
+            });
         }
     }
 }
@@ -246,7 +241,7 @@ fn before_delete(title: &str) {
             ..NotesChannel::default()
         });
     };
-    let title = title.to_string().clone();
+    let title = title.to_string();
     spawn_local(async move {
         Dialog::confirm(&title, confirm, || {});
     });
@@ -289,8 +284,8 @@ fn group_items(item: NoteStruct, idp: &i32) -> Option<Dom> {
     if &item.idp.get() != idp {
         return None;
     }
-    let idn_1 = item.idn.clone();
-    let idn_2 = item.idn.clone();
+    let idn_1 = item.idn;
+    let idn_2 = item.idn;
     Some(html!("li", {
         .child(html!(TAG_SPAN, {
             .class(css_class("item"))
@@ -323,11 +318,8 @@ fn long_click_move(_: events::MouseMove) {
 
 fn long_click_clear() {
     LONG_CLICK_TIMER.with(|timer| {
-        match timer.lock_mut().take() {
-            Some(timeout) => {
-                timeout.cancel();
-            }
-            None => {}
+        if let Some(timeout) = timer.lock_mut().take() {
+            timeout.cancel();
         }
     });
 }
@@ -383,7 +375,7 @@ fn element_email(value: &str) -> Dom {
 }
 
 fn element_select(idp: &usize) -> Dom {
-    let idp = idp.clone() as i32;
+    let idp = *idp as i32;
     let children = NOTES.lock_ref().iter().filter(|row| row.idp.get() == 0)
         .map(|row| element_option(row.label.get_cloned(), row.idn, row.idn == idp))
         .collect::<Vec<_>>();

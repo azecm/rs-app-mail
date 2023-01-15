@@ -11,6 +11,7 @@ use crate::constants::{PROP_HTML, PROP_ROLE, PROP_ROLE_BUTTON, PROP_TITLE, TAG_D
 use crate::dialog::dialogs::Dialog;
 use crate::editor::app_editor::{editor_close, open_message_preview, set_editor_attachments};
 use crate::elements::attachment::attachments_preview;
+use crate::elements::icons::{icon_envelope, icon_envelope_open, icon_inbox, icon_note, icon_read, icon_trash};
 use crate::loader::{message_update, messages_load};
 use crate::state::{BOX_STATE, CURRENT_BOX, LOADING_NEXT, NOTES};
 use crate::types::{BoxMailAddress, BoxMessage, MessagesResponse};
@@ -30,7 +31,7 @@ fn css_class(label: &str) -> String {
 }
 
 pub fn messages_channel(data: MessagesResponse) {
-    if data.data.len() > 0 {
+    if !data.data.is_empty() {
         if data.news {
             // подгружаем новые
             BOXES[data.email_box].lock_mut().insert_cloned(0, BoxMessage::from(data.data[0].clone()));
@@ -39,7 +40,7 @@ pub fn messages_channel(data: MessagesResponse) {
             log::info!("{} initialized", data.email_box);
             BOX_STATE[data.email_box].initialized.set(true);
             BOX_STATE[data.email_box].page.set(data.page);
-            let keys = BOXES[data.email_box].lock_ref().iter().map(|row| row.idb.clone()).collect::<Vec<_>>();
+            let keys = BOXES[data.email_box].lock_ref().iter().map(|row| row.idb).collect::<Vec<_>>();
             BOXES[data.email_box].lock_mut().extend(data.data.iter().filter(|row| !keys.contains(&row.idb)).map(|row| BoxMessage::from(row.clone())).collect::<Vec<_>>());
         }
     } else {
@@ -70,24 +71,22 @@ pub fn message_channel(data: MessageRequest) {
                 BOXES[box_target].lock_mut().insert_cloned(0, message);
             }
         }
-    } else {
-        if let Some(attachments) = data.attachments {
-            set_editor_attachments(attachments);
-        }
+    } else if let Some(attachments) = data.attachments {
+        set_editor_attachments(attachments);
     }
 }
 
 pub fn box_view(mbox: MailBoxes) -> Dom {
-    let mbox_2 = mbox.clone();
+    let mbox_2 = mbox;
     html!(TAG_DIV, {
         .visible_signal(CURRENT_BOX.signal().map(move|b| box_visible(b==mbox, &mbox)))
         .children_signal_vec(BOXES[box_type_index(&mbox)].signal_vec_cloned().map(move |row| message(&mbox_2, row)))
     })
 }
 
-const ATTR_DATA_KEY: &'static str = "key";
-const DATA_KEY_NOTE: &'static str = "note";
-const DATA_KEY_BOX: &'static str = "box";
+const ATTR_DATA_KEY: &str = "key";
+const DATA_KEY_NOTE: &str = "note";
+const DATA_KEY_BOX: &str = "box";
 
 fn message(mbox: &MailBoxes, row: BoxMessage) -> Dom {
     let count = match &row.attachments {
@@ -96,11 +95,10 @@ fn message(mbox: &MailBoxes, row: BoxMessage) -> Dom {
     };
 
     let is_inbox = mbox == &MailBoxes::Inbox;
-    let icon_note = include_str!("../icons/note.svg");
-    let idb = row.idb.clone();
-    let mbox_over = mbox.clone();
+    let idb = row.idb;
+    let mbox_over = *mbox;
 
-    let idb_selected = row.idb.clone();
+    let idb_selected = row.idb;
 
     html!(TAG_DIV, {
         .class(css_class("container"))
@@ -121,7 +119,7 @@ fn message(mbox: &MailBoxes, row: BoxMessage) -> Dom {
                         .attr(PROP_TITLE, "сохранить в записках")
                         .attr(PROP_ROLE, PROP_ROLE_BUTTON)
                         .attr(&attr_data(ATTR_DATA_KEY), DATA_KEY_NOTE)
-                        .prop(PROP_HTML, icon_note)
+                        .child(icon_note())
                     }),
                     html!(TAG_DIV, {
                         .class(css_class("date-block"))
@@ -179,7 +177,7 @@ fn box_visible(selected: bool, mb_type: &MailBoxes) -> bool {
     if selected {
         let box_index = box_type_index(mb_type);
         if !BOX_STATE[box_index].initialized.get() {
-            messages_load(MessagesRequest { page: 0, email_box: box_type_index(&mb_type) as i32 });
+            messages_load(MessagesRequest { page: 0, email_box: box_type_index(mb_type) as i32 });
         }
     }
     selected
@@ -214,16 +212,12 @@ fn email_icon(mbox: &MailBoxes, row: &BoxMessage) -> Dom {
             let is_trash = trash_signal.signal(),
             let unread = row.unread.signal() =>
             if *is_inbox {
-                if *is_over {IconState::AnyOver} else {
-                    if *unread { IconState::InboxDefault } else {  IconState::InboxOpen }
-                }
+                if *is_over {IconState::AnyOver} else if *unread { IconState::InboxDefault } else {  IconState::InboxOpen }
             }
-            else {
-                if *is_over {
-                    if *is_trash { IconState::TrashOver } else { IconState::AnyOver }
-                }
-                else { IconState::AnyDefault }
+            else if *is_over {
+                if *is_trash { IconState::TrashOver } else { IconState::AnyOver }
             }
+            else { IconState::AnyDefault }
         }
     };
 
@@ -233,29 +227,24 @@ fn email_icon(mbox: &MailBoxes, row: &BoxMessage) -> Dom {
         .attr(PROP_TITLE, title)
         .attr(PROP_ROLE, PROP_ROLE_BUTTON)
         .attr(&attr_data(ATTR_DATA_KEY), DATA_KEY_BOX)
-        .prop_signal(PROP_HTML, icon_signal().map(get_icon))
+        .child_signal(icon_signal().map(get_icon))
         .event(move|_:events::MouseEnter|{over_state_enter.set(true)})
         .event(move|_:events::MouseLeave|{over_state_leave.set(false)})
     })
 }
 
-fn get_icon<'a>(state: IconState) -> &'a str {
-    let icon_envelope = include_str!("../icons/envelope.svg");
-    let icon_envelope_open = include_str!("../icons/envelope-open.svg");
-    let icon_read = include_str!("../icons/read.svg");
-    let icon_inbox = include_str!("../icons/inbox.svg");
-    let icon_trash = include_str!("../icons/trash.svg");
-    match state {
-        IconState::InboxDefault => icon_envelope,
-        IconState::InboxOpen => icon_envelope_open,
-        IconState::AnyDefault => icon_read,
-        IconState::AnyOver => icon_trash,
-        IconState::TrashOver => icon_inbox,
-    }
+fn get_icon(state: IconState) -> Option<Dom> {
+    Some(match state {
+        IconState::InboxDefault => icon_envelope(),
+        IconState::InboxOpen => icon_envelope_open(),
+        IconState::AnyDefault => icon_read(),
+        IconState::AnyOver => icon_trash(),
+        IconState::TrashOver => icon_inbox(),
+    })
 }
 
 fn handle_over(mbox: &MailBoxes, idb: &u64) {
-    BOX_STATE[box_type_index(mbox)].selected.set(idb.clone());
+    BOX_STATE[box_type_index(mbox)].selected.set(*idb);
 }
 
 fn handle_click(data_key: String, mbox: &MailBoxes, idb: &u64) {
@@ -267,7 +256,7 @@ fn handle_click(data_key: String, mbox: &MailBoxes, idb: &u64) {
                 box_type_index(&MailBoxes::Trash) as i32
             };
             message_update(MessageRequest {
-                idb: idb.clone(),
+                idb: *idb,
                 box_current: Some(box_type_index(mbox) as i32),
                 box_target: Some(box_target),
                 ..MessageRequest::default()
@@ -276,10 +265,10 @@ fn handle_click(data_key: String, mbox: &MailBoxes, idb: &u64) {
         }
         DATA_KEY_NOTE => {
             if NOTES.lock_ref().len() > 0 {
-                let idp = NOTES.lock_ref()[0].idn.clone();
+                let idp = NOTES.lock_ref()[0].idn;
                 let label = NOTES.lock_ref()[0].label.get_cloned();
                 message_update(MessageRequest {
-                    idb: idb.clone(),
+                    idb: *idb,
                     notes_idp: Some(idp),
                     ..MessageRequest::default()
                 });
@@ -292,7 +281,7 @@ fn handle_click(data_key: String, mbox: &MailBoxes, idb: &u64) {
         _ => {}
     }
 
-    let idb = idb.clone();
+    let idb = *idb;
     if let Some(message) = BOXES[box_type_index(mbox)].lock_ref().iter().find(|row| row.idb == idb) {
         let sender = if let Some(label) = &message.sender.name { label.clone() } else { "".to_string() };
         let sender = view_email(&sender, &message.sender.address);
@@ -310,7 +299,7 @@ pub fn message_content() -> Dom {
             html!(TAG_DIV, {
                 .class(css_class("content"))
                 .prop_signal(PROP_HTML,
-                    common_signal().map(|item:BoxMessage|item.content.clone())
+                    common_signal().map(|item:BoxMessage|item.content)
                 )
             })
         )
@@ -318,10 +307,7 @@ pub fn message_content() -> Dom {
 }
 
 fn attachments_signal() -> impl Signal<Item=Option<Dom>> {
-    common_signal().map(|item: BoxMessage| match item.attachments {
-        Some(attachments) => Some(attachments_preview(&attachments)),
-        None => None
-    })
+    common_signal().map(|item: BoxMessage| item.attachments.map(|attachments| attachments_preview(&attachments)))
 }
 
 

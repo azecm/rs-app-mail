@@ -58,8 +58,8 @@ pub fn notes_channel(data: NotesChannel) {
         let idp = data.idp.unwrap_or_default();
         let item = NoteStruct {
             idn: data.idn,
-            idp: Mutable::new(idp.clone()),
-            position: Mutable::new(position.clone()),
+            idp: Mutable::new(idp),
+            position: Mutable::new(position),
             label: Mutable::new(data.label.unwrap_or_default()),
             email: Mutable::new(data.email.unwrap_or_default()),
             content: Mutable::new(data.content.unwrap_or_default()),
@@ -96,10 +96,10 @@ pub fn notes_channel(data: NotesChannel) {
                 let ind_next = NOTES.lock_ref().iter().rposition(|row| row.idp.get() == idp);
                 match ind_next {
                     Some(next) => {
-                        NOTES.lock_mut().insert_cloned(next + 1, item.clone());
+                        NOTES.lock_mut().insert_cloned(next + 1, item);
                     }
                     None => {
-                        NOTES.lock_mut().push_cloned(item.clone());
+                        NOTES.lock_mut().push_cloned(item);
                     }
                 };
             }
@@ -117,7 +117,7 @@ pub fn notes_channel(data: NotesChannel) {
                     item.position.set(to);
                     let next = (ind as i32 + (to - position)) as usize;
 
-                    NOTES.lock_mut().insert_cloned(next, item.clone());
+                    NOTES.lock_mut().insert_cloned(next, item);
                 }
             }
         }

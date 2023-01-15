@@ -15,9 +15,9 @@ use crate::elements::app_root::app_root;
 use crate::state::USER_KEY;
 use crate::utils::{get_html_element, get_input_value, get_location, query_selector, set_title};
 
-static KEY_ENTER: &'static str = "Enter";
-static FIELD_NAME: &'static str = "a";
-static FIELD_PASS: &'static str = "b";
+const KEY_ENTER: &str = "Enter";
+const FIELD_NAME: &str = "a";
+const FIELD_PASS: &str = "b";
 
 const AUTH_STATE_DEFAULT: usize = 1;
 const AUTH_STATE_LOGIN: usize = 2;
@@ -36,7 +36,7 @@ fn init_storage() {
         if let Ok(Some(local_storage)) = w.local_storage() {
             if let Ok(Some(value)) = local_storage.get_item(&mail_box) {
                 connect_json_data(API_LOGIN, vec![value], login_connect_result);
-                if let Err(_) = local_storage.remove_item(&mail_box) {}
+                local_storage.remove_item(&mail_box).ok();
             } else {
                 if TEST_USER_ID > 0 {
                     connect_json_data(API_LOGIN, vec![""], login_connect_result);
@@ -50,11 +50,23 @@ fn init_storage() {
             if let Ok(Some(local_storage)) = w1.local_storage() {
                 let key = USER_KEY.get_cloned();
                 if !key.is_empty() {
-                    if let Err(_) = local_storage.set_item(&mail_box, &key) {}
+                    local_storage.set_item(&mail_box, &key).ok();
                 }
             }
         });
-        w.set_onbeforeunload(Some(listener_callback.as_ref().unchecked_ref()));
+
+        let is_iphone:bool = match w.navigator().user_agent() {
+            Ok(ua)=>ua.contains("iPhone"),
+            Err(_)=>false
+        };
+
+        if is_iphone {
+            w.set_onpagehide(Some(listener_callback.as_ref().unchecked_ref()));
+        }
+        else{
+            w.set_onbeforeunload(Some(listener_callback.as_ref().unchecked_ref()));
+        }
+
         listener_callback.forget();
     }
 }
@@ -118,15 +130,15 @@ fn login_page() -> Dom {
 }
 
 fn handle_key_name(ev: events::KeyDown) {
-    if &ev.key() == KEY_ENTER {
+    if ev.key() == KEY_ENTER {
         if let Some(elem) = get_html_element(query_selector(&format!("[name={FIELD_PASS}]"))) {
-            if let Ok(_) = elem.focus() {}
+            if elem.focus().is_ok() {}
         }
     }
 }
 
 fn handle_key_pass(ev: events::KeyDown) {
-    if &ev.key() == KEY_ENTER {
+    if ev.key() == KEY_ENTER {
         login_connect();
     }
 }
@@ -134,7 +146,7 @@ fn handle_key_pass(ev: events::KeyDown) {
 fn login_connect() {
     let user_name = get_input_value(FIELD_NAME).trim().to_string();
     let user_pass = get_input_value(FIELD_PASS).trim().to_string();
-    let source = get_user_box().split("@").map(|row| row.split(".")
+    let source = get_user_box().split('@').map(|row| row.split('.')
         .collect::<Vec<_>>().join("+")).collect::<Vec<_>>().join("!");
     connect_json_data(API_LOGIN, vec![source, user_name, user_pass], login_connect_result);
 }
@@ -161,7 +173,7 @@ fn login_connect_result(data: LoginResult) {
 }
 
 fn login_after() -> Dom {
-    let title = format!("Почта для {}", get_user_box().split("@").collect::<Vec<_>>().join(" на "));
+    let title = format!("Почта для {}", get_user_box().split('@').collect::<Vec<_>>().join(" на "));
     set_title(&title);
     if let Err(err) = start_sse() {
         log::error!("sse connection error {:?}", err);
@@ -170,14 +182,16 @@ fn login_after() -> Dom {
 }
 
 pub fn get_user_box() -> String {
-    if let Ok(pathname) = get_location().pathname() {
-        let pathname: String = pathname.into();
-        let mail_box = pathname.split("/").collect::<Vec<_>>()[1];
+    get_location().map(|l|l.pathname().map_or(String::new(), |pathname|{
+        let pathname: String = pathname;
+        let mail_box = pathname.split('/').collect::<Vec<_>>()[1];
         if test_email(mail_box) {
-            return mail_box.to_string();
+            mail_box.to_string()
         }
-    }
-    "".to_string()
+        else {
+            String::new()
+        }
+    })).unwrap_or_default()
 }
 
 fn test_email(email: &str) -> bool {

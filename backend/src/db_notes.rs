@@ -68,7 +68,7 @@ async fn db_insert(session: &SessionStruct, data: NotesChannel) {
     fields.push("idu".to_string());
     values.push(idu.to_string());
 
-    if fields.len() > 0 {
+    if !fields.is_empty() {
         let prepared_values = linked.iter().map(|a| a as &(dyn ToSql + Sync)).collect::<Vec<_>>();
 
         let rows = db_query(DBIdn::from, &format!("insert into emails.notes ({}) values ({}) returning idn;", fields.join(","), values.join(",")), &prepared_values[..]).await;
@@ -76,7 +76,7 @@ async fn db_insert(session: &SessionStruct, data: NotesChannel) {
         if rows.len() == 1 {
             let idn = rows[0].idn;
             send(session, NotesChannel {
-                idn: idn.clone() as i32,
+                idn: idn as i32,
                 insert: Some(true),
                 label: data.label,
                 email: data.email,
@@ -87,9 +87,9 @@ async fn db_insert(session: &SessionStruct, data: NotesChannel) {
             });
 
             prev.insert((position - 1) as usize, DBNotesMini {
-                idp: idp.clone(),
-                position: position.clone(),
-                idn: idn.clone() as i32,
+                idp,
+                position,
+                idn: idn as i32,
             });
             db_notes_test_position(session, prev).await;
         }
@@ -102,7 +102,7 @@ async fn db_remove(session: &SessionStruct, idn: &i32) {
 
     let rows = db_query(DBCount::from, include_str!("../sql/select_notes_idp.sql"), &[&idu, &idn]).await;
     if rows[0].count == 0 {
-        send(session, NotesChannel { idn: idn.clone(), remove: Some(true), ..NotesChannel::default() });
+        send(session, NotesChannel { idn: *idn, remove: Some(true), ..NotesChannel::default() });
         prev.retain(|row| &row.idn != idn);
         db_notes_test_position(session, prev).await;
     }
@@ -110,7 +110,7 @@ async fn db_remove(session: &SessionStruct, idn: &i32) {
 
 async fn db_update(session: &SessionStruct, data: NotesChannel) {
     let idu = &session.idu;
-    let idn = data.idn.clone();
+    let idn = data.idn;
     let mut fields: Vec<String> = Vec::new();
     let mut values: Vec<String> = Vec::new();
     let label = data.label;
@@ -147,14 +147,12 @@ async fn db_update(session: &SessionStruct, data: NotesChannel) {
     }
     if let Some(event_current) = &event {
         if event_current.date.is_empty() {
-            fields.push(format!("event=null"));
-        } else {
-            if let Ok(txt) = serde_json::to_string(&event_current) {
-                fields.push(format!("event=$${}$$", txt));
-            }
+            fields.push("event=null".to_string());
+        } else if let Ok(txt) = serde_json::to_string(&event_current) {
+            fields.push(format!("event=$${}$$", txt));
         }
     }
-    if fields.len() > 0 {
+    if !fields.is_empty() {
         let mut prev = match position.is_some() || idp.is_some() {
             true => db_notes_position_prev(idu, &db_notes_idp(idu, &idn).await).await,
             false => vec![]
@@ -162,9 +160,9 @@ async fn db_update(session: &SessionStruct, data: NotesChannel) {
         let prepared_values = values.iter().map(|a| a as &(dyn ToSql + Sync)).collect::<Vec<_>>();
 
         if db_update_query(&format!("update emails.notes set {} where idu={idu} and idn={idn};", fields.join(",")), &prepared_values[..]).await {
-            let to = if idp.is_some() { None } else { position.clone() };
+            let to = if idp.is_some() { None } else { position };
             let position = if idp.is_some() { position } else { None };
-            send(session, NotesChannel { idn: idn.clone(), label, email, content, event, idp, position, to, ..NotesChannel::default() });
+            send(session, NotesChannel { idn, label, email, content, event, idp, position, to, ..NotesChannel::default() });
 
             if idp.is_some() {
                 let current = prev.iter().position(|row| row.idn == idn);
@@ -172,7 +170,7 @@ async fn db_update(session: &SessionStruct, data: NotesChannel) {
                     prev.remove(current);
                 }
                 db_notes_test_position(session, prev).await;
-            } else if let Some(position) = position.clone() {
+            } else if let Some(position) = position {
                 let current = prev.iter().position(|row| row.idn == idn);
                 if let Some(current) = current {
                     let item = prev.remove(current);
@@ -186,7 +184,7 @@ async fn db_update(session: &SessionStruct, data: NotesChannel) {
 
 async fn db_notes_idp(idu: &i32, idn: &i32) -> i32 {
     let rows = db_query(DBNotesMini::from, "select idn, idp, position from emails.notes where idu=$1 and idn=$2;", &[idu, idn]).await;
-    if rows.len() > 0 {
+    if !rows.is_empty() {
         rows[0].idp
     } else {
         0
@@ -200,12 +198,12 @@ async fn db_notes_position_prev(idu: &i32, idp: &i32) -> Vec<DBNotesMini> {
 async fn db_notes_test_position(session: &SessionStruct, prev: Vec<DBNotesMini>) {
     match db_conn().await {
         Ok(db) => {
-            for ind in 0..prev.len() {
+            for (ind, item) in prev.iter().enumerate() {
                 let position = (ind + 1) as i32;
-                if prev[ind].position != position {
-                    let idn = prev[ind].idn;
-                    if let Ok(_) = db.query("update emails.notes set position=$1 where idn=$2;", &[&position, &idn]).await {
-                        send(session, NotesChannel { idn: idn.clone(), position: Some(position), ..NotesChannel::default() });
+                if item.position != position {
+                    let idn = item.idn;
+                    if (db.query("update emails.notes set position=$1 where idn=$2;", &[&position, &idn]).await).is_ok() {
+                        send(session, NotesChannel { idn, position: Some(position), ..NotesChannel::default() });
                     }
                 }
             }

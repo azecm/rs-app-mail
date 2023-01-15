@@ -78,12 +78,12 @@ pub async fn route_login(hash: String, source: Vec<String>) -> Result<impl Reply
                 user_auth.remove(&user_key);
             }
         } else if TEST_USER_ID > 0 {
-            idu = TEST_USER_ID.clone();
+            idu = TEST_USER_ID;
         }
     } else if source.len() == 3 {
         let mail_box = source[0]
-            .split("!")
-            .map(|t| t.split("+").collect::<Vec<_>>().join("."))
+            .split('!')
+            .map(|t| t.split('+').collect::<Vec<_>>().join("."))
             .collect::<Vec<_>>().join("@");
         let user_name = source[1].clone();
         let user_pass = source[2].clone();

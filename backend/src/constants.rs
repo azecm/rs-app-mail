@@ -12,9 +12,9 @@ pub const MAIL_SOURCE_PATH: &str = "/Users/mac-user/Documents/_cache/mail/virtua
 #[cfg(not(target_os = "macos"))]
 pub const MAIL_SOURCE_PATH: &str = "/var/mail/virtual";
 
-const DIR_TEMP: &'static str = "temp";
-const DIR_SOURCE: &'static str = "source";
-const DIR_ATTACHMENT: &'static str = "attachment";
+const DIR_TEMP: &str = "temp";
+const DIR_SOURCE: &str = "source";
+const DIR_ATTACHMENT: &str = "attachment";
 
 
 pub fn path_to_attachment(email: &str, key: &str, ind: &usize) -> String {

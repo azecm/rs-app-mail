@@ -16,7 +16,7 @@ gloo-timers = { version = "0.2", features = ["futures"] }
 web-sys = { version = "0.3", features = [
     "Window", "Element", "DomStringMap", "EventListener", "Selection", "Range",
     "BinaryType", "Blob", "ErrorEvent", "FileReader", "MessageEvent", "ProgressEvent",
-    "WebSocket",
+    "WebSocket", "Navigator",
     "Request", "RequestInit", "RequestMode", "Response", "RequestCredentials", "Headers",
     "EventSource", "HtmlSelectElement", "HtmlDocument", "NodeList","Storage", "UrlSearchParams",
     "FormData", "FileList", "File", "XmlHttpRequest", "XmlHttpRequestUpload"

@@ -26,7 +26,7 @@ pub async fn db_message_route(session: &SessionStruct, data: MessageRequest) {
         });
     } else if let Some(notes_idp) = data.notes_idp {
         db_message_to_notes(session, notes_idp, data.idb).await;
-    } else if let Some(_) = data.attachments {
+    } else if data.attachments.is_some() {
         db_message_attachments(session, &data).await;
     } else {
         db_message_update(session, data).await;
@@ -71,7 +71,7 @@ async fn send_message_init(session: &SessionStruct, data: &MessageRequest) {
             for item in attachments.list.iter() {
                 let target_file = path_to_attachment(&sender.address, &key, &item.id);
                 let source_file = path_to_temp_with_ind(&key, &item.id);
-                if let Ok(_) = fs::create_dir_all(get_dir_path(&target_file)).await {
+                if (fs::create_dir_all(get_dir_path(&target_file)).await).is_ok() {
                     if let Err(err) = fs::rename(&source_file, &target_file).await {
                         tracing::error!("send_message_init {err}");
                     }
@@ -81,12 +81,9 @@ async fn send_message_init(session: &SessionStruct, data: &MessageRequest) {
 
         let (name, address) = get_email(&recipient);
         let recipient: DBMailAddress = DBMailAddress { name, address };
-        let attachments = match &attachments {
-            Some(attachments) => Some(DBMailAttachments::from(attachments)),
-            None => None
-        };
+        let attachments = attachments.as_ref().map(DBMailAttachments::from);
         db_box_add(
-            session.idu.clone(),
+            session.idu,
             box_type_index(&MailBoxes::Sent),
             true,
             sender,
@@ -118,10 +115,10 @@ async fn db_message_attachments(session: &SessionStruct, data: &MessageRequest) 
     if data.remove_id.is_none() && data.idb == 0 {
         if let Some(attachments) = &data.attachments {
             // удаляем все
-            if attachments.list.len() > 0 {
+            if !attachments.list.is_empty() {
                 let key = attachments.key.clone();
                 for item in attachments.list.iter() {
-                    if let Err(_) = fs::remove_file(&path_to_temp_with_ind(&key, &item.id)).await {}
+                    (fs::remove_file(&path_to_temp_with_ind(&key, &item.id)).await).ok();
                 }
                 return;
             }
@@ -139,7 +136,7 @@ async fn db_message_attachments(session: &SessionStruct, data: &MessageRequest) 
             let key = attachments.key.clone();
             let mut list = attachments.list.clone();
             let list = if let Some(pos) = attachments.list.iter().position(|row| &row.id == remove_id) {
-                if let Err(_) = fs::remove_file(&path_to_temp_with_ind(&key, &remove_id)).await {}
+                (fs::remove_file(&path_to_temp_with_ind(&key, remove_id)).await).ok();
                 list.remove(pos);
                 list.clone()
             } else {
@@ -152,16 +149,16 @@ async fn db_message_attachments(session: &SessionStruct, data: &MessageRequest) 
         if let Some(row) = get_attachments(session, &data.idb).await {
             if let Some(email) = db_user_email(&session.idu).await {
                 if let Some(prev) = row.attachments {
-                    if prev.list.len() > 0 {
+                    if !prev.list.is_empty() {
                         let mut ind: usize = 0;
                         let mut list: Vec<BoxMailAttachmentItem> = vec![];
                         for item in prev.list.iter() {
                             let source = path_to_attachment(&email, &prev.key, &item.id);
-                            if let Ok(_) = fs::copy(source, &path_to_temp_with_ind(&key, &(ind + 1))).await {
-                                ind = ind + 1;
+                            if (fs::copy(source, &path_to_temp_with_ind(&key, &(ind + 1))).await).is_ok() {
+                                ind += 1;
                                 list.push(BoxMailAttachmentItem {
                                     id: ind,
-                                    size: item.size.clone(),
+                                    size: item.size,
                                     file_name: item.file_name.clone(),
                                 });
                             }
@@ -216,7 +213,7 @@ async fn db_message_update(session: &SessionStruct, data: MessageRequest) {
         fields.push(format!("box={box_target}"));
     }
 
-    if fields.len() > 0 {
+    if !fields.is_empty() {
         let idu = &session.idu;
         let idb = &data.idb;
         let fields = fields.join(",");
@@ -237,7 +234,7 @@ async fn db_message_update(session: &SessionStruct, data: MessageRequest) {
 
 pub async fn db_messages_route(session: &SessionStruct, data: MessagesRequest) {
     let rows = db_box_page(&session.idu, &data.email_box, &data.page).await;
-    let result = DBPageResponse { email_box: data.email_box.clone(), page: data.page.clone(), data: rows, news: false };
+    let result = DBPageResponse { email_box: data.email_box, page: data.page, data: rows, news: false };
     match serde_json::to_string(&result) {
         Ok(text) => {
             sse_personal_channel(session, Message::Messages(text));
@@ -259,7 +256,7 @@ pub fn db_box_add_received(flag_spam: bool, current_email: String, sender: DBMai
     let idu = match USER_BY_EMAIL.lock() {
         Ok(users) => {
             match users.get(&current_email) {
-                Some(val) => val.clone(),
+                Some(val) => *val,
                 None => {
                     return;
                 }

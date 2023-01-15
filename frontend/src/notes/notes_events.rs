@@ -30,11 +30,11 @@ pub fn events_reload() {
                         None => "".to_string()
                     };
                     Some(EventItemStruct {
-                        idn: note.idn.clone(),
+                        idn: note.idn,
                         idp: note.idp.get_cloned(),
                         label: note.label.get_cloned(),
                         order: js_date.get_time() as i64,
-                        date: event.date.clone(),
+                        date: event.date,
                         group,
                     })
                 } else {
@@ -67,7 +67,7 @@ pub fn events_content() -> Dom {
 }
 
 fn events_view(notes: Vec<EventItemStruct>) -> Option<Dom> {
-    if notes.len() == 0 {
+    if notes.is_empty() {
         None
     } else {
         Some(html!("ul", {
@@ -105,14 +105,12 @@ fn handle_select(e: events::Click) {
             .iter()
             .filter_map(|row| if row.idp.get() == 0 { Some(row.idn) } else { None }).collect::<Vec<_>>();
         let position = groups.iter().position(|val| val == &idp).unwrap_or_default();
-        let mut ind = 0;
-        for elem in query_selector_all("#col-2 details") {
+        for (ind, elem) in query_selector_all("#col-2 details").into_iter().enumerate() {
             if position == ind {
-                if let Err(_) = elem.set_attribute("open", "") {}
+                elem.set_attribute("open", "").ok();
             } else {
-                if let Err(_) = elem.remove_attribute("open") {}
+                elem.remove_attribute("open").ok();
             }
-            ind += 1;
         }
     }
 }

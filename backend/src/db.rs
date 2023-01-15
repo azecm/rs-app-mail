@@ -6,7 +6,7 @@ use postgres_types::ToSql;
 use serde::Deserialize;
 use tokio_postgres::{NoTls, Row};
 
-const DB_PARAMS: &'static str = include_str!("../../env.json");
+const DB_PARAMS: &str = include_str!("../../env.json");
 
 #[derive(Deserialize, Debug)]
 struct DBParams {
